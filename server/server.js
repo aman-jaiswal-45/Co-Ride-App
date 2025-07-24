@@ -11,8 +11,14 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = [
+  'http://localhost:5173',               // Local dev
+  'https://co-ride-app.vercel.app',     // Deployed frontend
+];
 const io = new Server(server, {
-    cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] }
+    cors: { origin: allowedOrigins, 
+            Credentials: true,
+            methods: ["GET", "POST"] }
 });
 
 app.use(express.json());
