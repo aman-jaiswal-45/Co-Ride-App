@@ -7,7 +7,7 @@ import LiveMap from '../components/LiveMap';
 import ChatBox from '../components/ChatBox';
 import Spinner from '../components/Spinner';
 
-const SOCKET_SERVER_URL = "http://localhost:5000";
+const SOCKET_SERVER_URL = "https://co-ride-app.onrender.com";
 
 const ActiveRidePage = () => {
     const { rideId } = useParams();
