@@ -1,18 +1,25 @@
 const Ride = require('../models/Ride');
 const User = require('../models/User');
 
-// ... (createRide, getRides, getMyOfferedRides, getMyBookedRides, getChatHistory remain the same)
+// @desc    Create a new ride
 exports.createRide = async (req, res) => {
     try {
         const driverId = req.user.id;
         const driver = await User.findById(driverId);
-        if (!driver) return res.status(404).json({ success: false, error: 'User not found' });
-        if (driver.role !== 'Driver') return res.status(403).json({ success: false, error: 'User is not authorized to create a ride' });
-        if (!driver.vehicleDetails || !driver.vehicleDetails.name) return res.status(400).json({ success: false, error: 'Please update your vehicle details in your profile before offering a ride.' });
+
+        // MODIFIED: Instead of checking for a 'Driver' role, we check for vehicle details.
+        // This is the new gatekeeper for offering a ride.
+        if (!driver.vehicleDetails || !driver.vehicleDetails.name || !driver.vehicleDetails.regNumber) {
+             return res.status(400).json({ success: false, error: 'Please complete your vehicle details in your profile before offering a ride.' });
+        }
+
         const rideData = { ...req.body, driver: driverId, vehicle: driver.vehicleDetails };
         const ride = await Ride.create(rideData);
         res.status(201).json({ success: true, data: ride });
-    } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+
+    } catch (error) {
+        res.status(400).json({ success: false, error: error.message });
+    }
 };
 exports.getRides = async (req, res) => {
     try {

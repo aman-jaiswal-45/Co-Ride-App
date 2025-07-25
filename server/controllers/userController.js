@@ -1,8 +1,6 @@
 const User = require('../models/User');
 
 // @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private
 exports.getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -17,15 +15,15 @@ exports.getUserProfile = async (req, res) => {
 };
 
 // @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
 exports.updateUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
 
         if (user) {
             user.name = req.body.name || user.name;
-            user.role = req.body.role || user.role;
+            // MODIFIED: Removed the ability for a user to change their role.
+            
+            // Users can now freely add or update their vehicle details.
             if(req.body.vehicleDetails) {
                 user.vehicleDetails.type = req.body.vehicleDetails.type || user.vehicleDetails.type;
                 user.vehicleDetails.name = req.body.vehicleDetails.name || user.vehicleDetails.name;

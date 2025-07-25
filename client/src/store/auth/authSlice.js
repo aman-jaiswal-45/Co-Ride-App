@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from './authService';
+import { updateUserProfile } from '../user/userSlice'; // Import the action from userSlice
 
-// Get user from localStorage
 const user = JSON.parse(localStorage.getItem('user'));
 
 const initialState = {
@@ -12,12 +12,10 @@ const initialState = {
     message: '',
 };
 
-// Register user, then get their data
 export const register = createAsyncThunk('auth/register', async (user, thunkAPI) => {
     try {
         const tokenData = await authService.register(user);
         const userData = await authService.getMe(tokenData.token);
-        // Combine token and user data
         const combinedData = { token: tokenData.token, data: userData.data };
         localStorage.setItem('user', JSON.stringify(combinedData));
         return combinedData;
@@ -27,12 +25,10 @@ export const register = createAsyncThunk('auth/register', async (user, thunkAPI)
     }
 });
 
-// Login user, then get their data
 export const login = createAsyncThunk('auth/login', async (user, thunkAPI) => {
     try {
         const tokenData = await authService.login(user);
         const userData = await authService.getMe(tokenData.token);
-        // Combine token and user data
         const combinedData = { token: tokenData.token, data: userData.data };
         localStorage.setItem('user', JSON.stringify(combinedData));
         return combinedData;
@@ -83,7 +79,16 @@ export const authSlice = createSlice({
                 state.message = action.payload;
                 state.user = null;
             })
-            .addCase(logout.fulfilled, (state) => { state.user = null; });
+            .addCase(logout.fulfilled, (state) => { state.user = null; })
+            // THIS IS THE FIX: Listen for the updateUserProfile action
+            .addCase(updateUserProfile.fulfilled, (state, action) => {
+                if (state.user) {
+                    state.user.data = action.payload.data;
+                    // Also update localStorage to persist the change on refresh
+                    const updatedUser = JSON.stringify(state.user);
+                    localStorage.setItem('user', updatedUser);
+                }
+            });
     },
 });
 

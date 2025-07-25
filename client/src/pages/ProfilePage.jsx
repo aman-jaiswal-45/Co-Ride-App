@@ -14,7 +14,6 @@ const ProfilePage = () => {
     const { profile, isLoading } = useSelector(state => state.user);
     const [formData, setFormData] = useState({
         name: '',
-        role: 'Rider',
         vehicleDetails: {
             type: 'Car',
             name: '',
@@ -31,7 +30,6 @@ const ProfilePage = () => {
         if (profile) {
             setFormData({
                 name: profile.name || '',
-                role: profile.role || 'Rider',
                 vehicleDetails: {
                     type: profile.vehicleDetails?.type || 'Car',
                     name: profile.vehicleDetails?.name || '',
@@ -47,10 +45,6 @@ const ProfilePage = () => {
 
     const onVehicleChange = (e) => {
         setFormData({ ...formData, vehicleDetails: { ...formData.vehicleDetails, [e.target.name]: e.target.value } });
-    };
-    
-    const onRoleChange = (value) => {
-        setFormData({ ...formData, role: value });
     };
 
     const onSubmit = (e) => {
@@ -77,50 +71,39 @@ const ProfilePage = () => {
                             <Label htmlFor="name">Name</Label>
                             <Input id="name" name="name" value={formData.name} onChange={onChange} />
                         </div>
-                        <div className="space-y-2">
-                            <Label>Role</Label>
-                             <RadioGroup onValueChange={onRoleChange} value={formData.role} className="flex space-x-4">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Rider" id="r1" />
-                                    <Label htmlFor="r1">Rider</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="Driver" id="r2" />
-                                    <Label htmlFor="r2">Driver</Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
 
-                        {formData.role === 'Driver' && (
-                            <Card className="p-4 bg-slate-50">
-                                <CardHeader className="p-0 mb-4">
-                                    <CardTitle className="text-lg">Vehicle Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 space-y-4">
-                                     <div className="space-y-2">
-                                        <Label>Vehicle Type</Label>
-                                         <RadioGroup onValueChange={(val) => onVehicleChange({target: {name: 'type', value: val}})} value={formData.vehicleDetails.type} className="flex space-x-4">
-                                            <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="Car" id="v1" />
-                                                <Label htmlFor="v1">Car</Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="Bike" id="v2" />
-                                                <Label htmlFor="v2">Bike</Label>
-                                            </div>
-                                        </RadioGroup>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="vehicleName">Vehicle Name</Label>
-                                        <Input id="vehicleName" name="name" value={formData.vehicleDetails.name} onChange={onVehicleChange} placeholder="e.g., Maruti Swift" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="regNumber">Registration Number</Label>
-                                        <Input id="regNumber" name="regNumber" value={formData.vehicleDetails.regNumber} onChange={onVehicleChange} placeholder="e.g., MP04AB1234" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* MODIFIED: Role selection is removed */}
+
+                        <Card className="p-4 bg-slate-50 border-dashed">
+                            <CardHeader className="p-0 mb-4">
+                                <CardTitle className="text-lg">Vehicle Details</CardTitle>
+                                <CardDescription>Add your vehicle information here to start offering rides.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0 space-y-4">
+                                 <div className="space-y-2">
+                                    <Label>Vehicle Type</Label>
+                                     <RadioGroup onValueChange={(val) => onVehicleChange({target: {name: 'type', value: val}})} value={formData.vehicleDetails.type} className="flex space-x-4">
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="Car" id="v1" />
+                                            <Label htmlFor="v1">Car</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="Bike" id="v2" />
+                                            <Label htmlFor="v2">Bike</Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="vehicleName">Vehicle Name / Model</Label>
+                                    <Input id="vehicleName" name="name" value={formData.vehicleDetails.name} onChange={onVehicleChange} placeholder="e.g., Maruti Swift" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="regNumber">Registration Number</Label>
+                                    <Input id="regNumber" name="regNumber" value={formData.vehicleDetails.regNumber} onChange={onVehicleChange} placeholder="e.g., MP04AB1234" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
                         <Button type="submit" disabled={isLoading} className="w-full">
                             {isLoading ? <Spinner /> : 'Update Profile'}
                         </Button>

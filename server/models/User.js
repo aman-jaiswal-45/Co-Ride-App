@@ -10,21 +10,20 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please add an email'],
         unique: true,
-        match: [
-            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-            'Please add a valid email'
-        ]
+        match: [ /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email' ]
     },
     password: {
         type: String,
         required: [true, 'Please add a password'],
         minlength: 6,
-        select: false // When we get a user, it won't show the password
+        select: false
     },
+    // The 'role' field has been removed for regular users.
+    // We keep it only for the special 'Admin' case.
     role: {
         type: String,
-        enum: ['Rider', 'Driver', 'Admin'],
-        default: 'Rider'
+        enum: ['User', 'Admin'],
+        default: 'User'
     },
     vehicleDetails: {
         type: { type: String, enum: ['Car', 'Bike'] },
