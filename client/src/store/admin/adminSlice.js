@@ -7,7 +7,8 @@ const initialState = {
     rides: [],
     isLoading: false,
     isError: false,
-    message: ''
+    message: '',
+    feedback: [],
 };
 
 export const getStats = createAsyncThunk('admin/getStats', async (_, thunkAPI) => {
@@ -34,6 +35,16 @@ export const getAllRides = createAsyncThunk('admin/getAllRides', async (_, thunk
     try {
         const token = thunkAPI.getState().auth.user.token;
         return await adminService.getAllRides(token);
+    } catch (error) {
+        const message = (error.response?.data?.error) || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
+export const getAllFeedback = createAsyncThunk('admin/getAllFeedback', async (_, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user.token;
+        return await adminService.getAllFeedback(token);
     } catch (error) {
         const message = (error.response?.data?.error) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
@@ -74,6 +85,16 @@ export const adminSlice = createSlice({
                 state.rides = action.payload.data;
             })
             .addCase(getAllRides.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(getAllFeedback.pending, (state) => { state.isLoading = true; })
+            .addCase(getAllFeedback.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.feedback = action.payload.data;
+            })
+            .addCase(getAllFeedback.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

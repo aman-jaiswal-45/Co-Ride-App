@@ -1,5 +1,12 @@
 const Ride = require('../models/Ride');
 const User = require('../models/User');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
+const instance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // @desc    Create a new ride
 exports.createRide = async (req, res) => {
@@ -93,9 +100,6 @@ exports.startRide = async (req, res) => {
         res.status(200).json({ success: true, data: ride });
     } catch (error) { res.status(500).json({ success: false, error: 'Server Error' }); }
 };
-// @desc    End a ride
-// @route   POST /api/rides/:id/end
-// @access  Private (Driver only)
 exports.endRide = async (req, res) => {
     try {
         const ride = await Ride.findById(req.params.id);
@@ -110,5 +114,49 @@ exports.endRide = async (req, res) => {
         res.status(200).json({ success: true, data: ride });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Server Error' });
+    }
+};
+
+// @desc    Create a Razorpay order for a ride booking
+// @route   POST /api/payments/create-order/:rideId
+// @access  Private
+exports.createOrder = async (req, res) => {
+    try {
+        const { rideId } = req.params;
+        const userId = req.user.id;
+
+        const ride = await Ride.findById(rideId);
+        if (!ride) {
+            return res.status(404).json({ success: false, error: 'Ride not found' });
+        }
+        if (ride.status !== 'InProgress') {
+            return res.status(400).json({ success: false, error: 'Payment can only be made after the ride has started.' });
+        }
+        
+        const passenger = ride.passengers.find(p => p.user.toString() === userId && p.status === 'approved');
+        if (!passenger) {
+            return res.status(403).json({ success: false, error: 'You do not have an approved booking for this ride.' });
+        }
+        if (passenger.paymentStatus === 'paid') {
+            return res.status(400).json({ success: false, error: 'You have already paid for this ride.' });
+        }
+
+        const options = {
+            amount: ride.costPerSeat * 100,
+            currency: "INR",
+            // THIS IS THE FIX: Generate a shorter, unique receipt ID
+            receipt: `receipt_${rideId.slice(-8)}_${Date.now()}`,
+            notes: {
+                rideId: rideId,
+                passengerId: userId
+            }
+        };
+
+        const order = await instance.orders.create(options);
+        res.status(200).json({ success: true, order });
+
+    } catch (error) {
+        console.error('Razorpay order error:', error);
+        res.status(500).json({ success: false, error: 'Could not create payment order' });
     }
 };

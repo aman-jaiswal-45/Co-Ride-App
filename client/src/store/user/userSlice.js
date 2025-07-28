@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import userService from './userService';
+import { updateUserAuthData } from '../auth/authSlice';
 
 const initialState = {
     profile: null,
@@ -21,7 +22,10 @@ export const getUserProfile = createAsyncThunk('user/getProfile', async (_, thun
 export const updateUserProfile = createAsyncThunk('user/updateProfile', async (userData, thunkAPI) => {
     try {
         const token = thunkAPI.getState().auth.user.token;
-        return await userService.updateUserProfile(userData, token);
+        const response = await userService.updateUserProfile(userData, token);
+        // Dispatch an action to update the auth slice as well
+        thunkAPI.dispatch(updateUserAuthData(response.data));
+        return response;
     } catch (error) {
         const message = (error.response?.data?.error) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);

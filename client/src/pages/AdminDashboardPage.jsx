@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getStats, getAllUsers, getAllRides, reset } from '../store/admin/adminSlice';
+import { getStats, getAllUsers, getAllRides, getAllFeedback, reset } from '../store/admin/adminSlice';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,12 +9,13 @@ import { format } from 'date-fns';
 
 const AdminDashboardPage = () => {
     const dispatch = useDispatch();
-    const { stats, users, rides, isLoading } = useSelector(state => state.admin);
+    const { stats, users, rides, feedback, isLoading } = useSelector(state => state.admin);
 
     useEffect(() => {
         dispatch(getStats());
         dispatch(getAllUsers());
         dispatch(getAllRides());
+        dispatch(getAllFeedback());
 
         return () => {
             dispatch(reset());
@@ -58,6 +59,7 @@ const AdminDashboardPage = () => {
                 <TabsList>
                     <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="rides">Rides</TabsTrigger>
+                    <TabsTrigger value="feedback">Feedback</TabsTrigger>
                 </TabsList>
                 <TabsContent value="users">
                     <Card>
@@ -112,6 +114,36 @@ const AdminDashboardPage = () => {
                                             <TableCell>{ride.driver.name}</TableCell>
                                             <TableCell>{ride.status}</TableCell>
                                             <TableCell>{ride.passengers.length} / {ride.passengers.length + ride.seatsAvailable}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="feedback">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>App Feedback</CardTitle>
+                            <CardDescription>Here's what users are saying about the app.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Message</TableHead>
+                                        <TableHead>Date</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {feedback.map(item => (
+                                        <TableRow key={item._id}>
+                                            <TableCell>{item.user.name}</TableCell>
+                                            <TableCell><Badge variant="secondary">{item.type}</Badge></TableCell>
+                                            <TableCell className="max-w-sm whitespace-pre-wrap">{item.message}</TableCell>
+                                            <TableCell>{format(new Date(item.createdAt), 'PP')}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>

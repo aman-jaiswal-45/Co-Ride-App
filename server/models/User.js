@@ -18,8 +18,6 @@ const UserSchema = new mongoose.Schema({
         minlength: 6,
         select: false
     },
-    // The 'role' field has been removed for regular users.
-    // We keep it only for the special 'Admin' case.
     role: {
         type: String,
         enum: ['User', 'Admin'],
@@ -29,6 +27,23 @@ const UserSchema = new mongoose.Schema({
         type: { type: String, enum: ['Car', 'Bike'] },
         name: String,
         regNumber: String
+    },
+    averageRating: { 
+        type: Number,
+        min: 0,
+        max: 5
+    },
+    totalRatings: { 
+        type: Number,
+        default: 0
+    },
+    profilePictureUrl: { 
+        type: String,
+        default: 'https://api.pravatar.cc/150?u=a042581f4e29026704d' 
+    },
+    bio: { // <-- ADD THIS
+        type: String,
+        maxlength: [250, 'Bio cannot be more than 250 characters']
     },
     createdAt: {
         type: Date,

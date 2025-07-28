@@ -20,10 +20,17 @@ const getAllRides = async (token) => {
     return response.data;
 };
 
+const getAllFeedback = async (token) => {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const response = await axios.get(API_URL + 'feedback', config);
+    return response.data;
+};
+
 const adminService = {
     getStats,
     getAllUsers,
     getAllRides,
+    getAllFeedback,
 };
 
 export default adminService;

@@ -21,6 +21,8 @@ exports.updateUserProfile = async (req, res) => {
 
         if (user) {
             user.name = req.body.name || user.name;
+            user.bio = req.body.bio; // Allow setting bio to empty string
+            user.profilePictureUrl = req.body.profilePictureUrl || user.profilePictureUrl;
             // MODIFIED: Removed the ability for a user to change their role.
             
             // Users can now freely add or update their vehicle details.

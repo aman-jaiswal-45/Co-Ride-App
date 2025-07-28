@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { getMyOfferedRides, getMyBookedRides, reset, startRide, manageBookingRequest, endRide } from '../store/ride/rideSlice';
+import { getMyOfferedRides, getMyBookedRides, reset, startRide, endRide , manageBookingRequest } from '../store/ride/rideSlice';
+import { createOrder } from '../store/payment/paymentSlice';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import Spinner from '../components/Spinner';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import ReviewModal from '../components/ReviewModal';
 
 const MyRidesPage = () => {
     const dispatch = useDispatch();
@@ -17,14 +19,19 @@ const MyRidesPage = () => {
     const { user } = useSelector((state) => state.auth);
     const currentUserId = user?.data?._id;
 
-    const role = user?.data?.role; // Assuming 'Driver' or 'Rider'
-    const defaultTab = role === 'Driver' ? 'offered' : 'booked';
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [reviewTarget, setReviewTarget] = useState({ rideId: null, revieweeId: null, revieweeName: '' });
 
     useEffect(() => {
         dispatch(getMyOfferedRides());
         dispatch(getMyBookedRides());
         return () => dispatch(reset());
     }, [dispatch]);
+
+    const handleOpenReviewModal = (rideId, revieweeId, revieweeName) => {
+        setReviewTarget({ rideId, revieweeId, revieweeName });
+        setIsReviewModalOpen(true);
+    };
 
     const handleStartRide = (rideId) => {
         dispatch(startRide(rideId)).unwrap()
@@ -49,6 +56,39 @@ const MyRidesPage = () => {
             .catch((error) => toast.error("Failed to end ride", { description: error }));
     };
 
+    const handlePayment = (ride) => {
+        dispatch(createOrder(ride._id)).unwrap()
+            .then((res) => {
+                const { order } = res;
+                const options = {
+                    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: "Co-Ride",
+                    description: `Payment for ride to ${ride.to.text}`,
+                    order_id: order.id,
+                    handler: function (response) {
+                        // This function is called after a successful payment
+                        toast.success("Payment successful!");
+                        // Refresh the rides to show the updated "paid" status
+                        navigate('/dashboard');
+                    },
+                    prefill: {
+                        name: user.data.name,
+                        email: user.data.email,
+                    },
+                    theme: {
+                        color: "#3399cc"
+                    }
+                };
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            })
+            .catch((error) => {
+                toast.error("Payment failed", { description: error });
+            });
+    };
+
     const renderOfferedRides = () => {
         if (isLoading) return <div className="flex justify-center mt-10"><Spinner /></div>;
         if (offeredRides.length === 0) return <p className="text-center text-slate-500 mt-10">You have not offered any rides.</p>;
@@ -71,13 +111,20 @@ const MyRidesPage = () => {
                             <h4 className="font-semibold mb-2">Booking Requests</h4>
                             {ride.passengers && ride.passengers.filter(p => p.status === 'pending').length > 0 ? (
                                 <ul className="space-y-2">
-                                    {ride.passengers.filter(p => p.status === 'pending').map(p => (
+                                    {ride.passengers.map(p => (
                                         <li key={p.user?._id || p._id} className="flex justify-between items-center p-2 bg-slate-100 rounded-md">
-                                            <span>{p.user?.name || 'User name unavailable'}</span>
-                                            <div className="space-x-2">
-                                                <Button size="sm" disabled={!p.user} onClick={() => handleManageRequest(ride._id, p.user._id, 'approved')}>Approve</Button>
-                                                <Button size="sm" disabled={!p.user} variant="destructive" onClick={() => handleManageRequest(ride._id, p.user._id, 'rejected')}>Reject</Button>
-                                            </div>
+                                            <span>{p.user?.name || '...'}</span>
+                                            {p.status === 'pending' ? (
+                                                <div className="space-x-2">
+                                                    <Button size="sm" disabled={!p.user} onClick={() => handleManageRequest(ride._id, p.user._id, 'approved')}>Approve</Button>
+                                                    <Button size="sm" disabled={!p.user} variant="destructive" onClick={() => handleManageRequest(ride._id, p.user._id, 'rejected')}>Reject</Button>
+                                                </div>
+                                            ) : (
+                                                // --- NEW LOGIC ---
+                                                <Badge variant={p.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                                                    {p.paymentStatus === 'paid' ? 'Paid' : 'Payment Pending'}
+                                                </Badge>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
@@ -93,6 +140,19 @@ const MyRidesPage = () => {
                                     <Button variant="destructive" onClick={() => handleEndRide(ride._id)}>End Ride</Button>
                                     <Button variant="secondary" onClick={() => navigate(`/ride/${ride._id}`)}>Go to Active Ride</Button>
                                 </>
+                            )}
+                            {ride.status === 'Completed' && ride.passengers.length>0 && (
+                                <div className="pt-2 border-t border-b">
+                                    <h4 className="font-bold mb-2 text-sm">Review Your Passengers</h4>
+                                    {ride.passengers.filter(p => p.status === 'approved').map(p => (
+                                        <div key={p.user._id} className="flex justify-between items-center mb-2 gap-3">
+                                            <span className='font-semibold text-sm'>{p.user.name}</span>
+                                            <Button size="sm" variant="outline" onClick={() => handleOpenReviewModal(ride._id, p.user._id, p.user.name)}>
+                                                Leave Review
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </CardFooter>
                     </Card>
@@ -132,10 +192,28 @@ const MyRidesPage = () => {
                             <CardContent className="flex-grow">
                                 <p className="text-sm text-muted-foreground">{format(new Date(ride.departureTime), 'PPpp')}</p>
                             </CardContent>
-                            <CardFooter>
+                            <CardFooter className="flex-col items-stretch space-y-2">
                                 {ride.status === 'InProgress' && myBooking?.status === 'approved' && (
                                     <Button className="w-full" variant="secondary" onClick={() => navigate(`/ride/${ride._id}`)}>
                                         Track Live Ride
+                                    </Button>
+                                )}
+                                {myBooking?.status === 'approved' && ride.status === 'InProgress' && myBooking.paymentStatus === 'pending' && (
+                                    <Button className="w-full" onClick={() => handlePayment(ride)}>
+                                        Pay Now (₹{ride.costPerSeat})
+                                    </Button>
+                                )}
+                                {myBooking?.paymentStatus === 'paid' && (
+                                    <Badge className="w-full justify-center py-2 bg-green-100 text-green-800">Payment Confirmed</Badge>
+                                )}
+                                {ride.status === 'InProgress' && myBooking?.status === 'approved' && (
+                                    <Button className="w-full" variant="secondary" onClick={() => navigate(`/ride/${ride._id}`)}>
+                                        Track Live Ride
+                                    </Button>
+                                )}
+                                {ride.status === 'Completed' && myBooking?.status === 'approved' && (
+                                    <Button className="w-full" onClick={() => handleOpenReviewModal(ride._id, ride.driver._id, ride.driver.name)}>
+                                        Review Driver
                                     </Button>
                                 )}
                             </CardFooter>
@@ -149,7 +227,7 @@ const MyRidesPage = () => {
     return (
         <div className="container mx-auto py-8">
             <h1 className="text-3xl font-bold mb-6">My Rides</h1>
-            <Tabs defaultValue={defaultTab} className="w-full">
+            <Tabs defaultValue="booked" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="booked">Rides I've Booked</TabsTrigger>
                     <TabsTrigger value="offered">Rides I'm Offering</TabsTrigger>
@@ -161,8 +239,15 @@ const MyRidesPage = () => {
                     {renderOfferedRides()}
                 </TabsContent>
             </Tabs>
+            <ReviewModal 
+                isOpen={isReviewModalOpen}
+                setIsOpen={setIsReviewModalOpen}
+                rideId={reviewTarget.rideId}
+                revieweeId={reviewTarget.revieweeId}
+                revieweeName={reviewTarget.revieweeName}
+            />
         </div>
     );
-};
+}; 
 
 export default MyRidesPage;

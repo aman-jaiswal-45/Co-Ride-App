@@ -8,7 +8,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "nodemon": "^3.1.10",
-    "socket.io": "^4.8.1"
+    "razorpay": "^2.9.6",
+    "socket.io": "^4.8.1",
+    "stripe": "^18.3.0"
   },
   "name": "server",
   "version": "1.0.0",

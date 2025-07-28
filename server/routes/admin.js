@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers, getAllRides, getStats } = require('../controllers/adminController');
+const { getAllUsers, getAllRides, getStats, getAllFeedback } = require('../controllers/adminController');
 const { protect } = require('../middleware/authMiddleware');
 const { protectAdmin } = require('../middleware/adminMiddleware');
 
@@ -11,5 +11,6 @@ router.use(protect, protectAdmin);
 router.get('/users', getAllUsers);
 router.get('/rides', getAllRides);
 router.get('/stats', getStats);
+router.get('/feedback', getAllFeedback);
 
 module.exports = router;
