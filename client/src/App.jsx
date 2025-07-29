@@ -19,7 +19,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 
-const SOCKET_SERVER_URL = "http://localhost:5000" || "https://co-ride-app.onrender.com"; // Update with your actual socket server URL
+const SOCKET_SERVER_URL = "https://co-ride-app.onrender.com"; // Update with your actual socket server URL
 
 // A new component to handle global socket logic
 const SocketManager = () => {

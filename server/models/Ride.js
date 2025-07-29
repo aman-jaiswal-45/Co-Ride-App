@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const PassengerSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-    // paymentStatus: { type: String, enum: ['pending', 'paid'], default: 'pending' }
+    paymentStatus: { type: String, enum: ['pending', 'paid'], default: 'pending' }
 }, { _id: false });
 
 const ChatMessageSchema = new mongoose.Schema({
