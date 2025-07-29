@@ -19,7 +19,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 
-const SOCKET_SERVER_URL = "http://localhost:5000";
+const SOCKET_SERVER_URL = "http://localhost:5000" || "https://co-ride-app.onrender.com"; // Update with your actual socket server URL
 
 // A new component to handle global socket logic
 const SocketManager = () => {
@@ -28,8 +28,15 @@ const SocketManager = () => {
     const { user } = useSelector(state => state.auth);
     const { offeredRides } = useSelector(state => state.rides);
 
+    // Fetch offered rides as soon as the user is available
     useEffect(() => {
         if (user) {
+            dispatch(getMyOfferedRides());
+        }
+    }, [user, dispatch]);
+
+    useEffect(() => {
+        if (user && offeredRides.length > 0) {
             const socket = io(SOCKET_SERVER_URL);
             
             // Join rooms for all offered rides to listen for payments

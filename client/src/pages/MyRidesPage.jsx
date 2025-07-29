@@ -17,13 +17,20 @@ const MyRidesPage = () => {
     const navigate = useNavigate();
     const { offeredRides, bookedRides, isLoading } = useSelector((state) => state.rides);
     const { user } = useSelector((state) => state.auth);
+    const { isLoading: isPaymentLoading } = useSelector((state) => state.payment);
     const currentUserId = user?.data?._id;
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewTarget, setReviewTarget] = useState({ rideId: null, revieweeId: null, revieweeName: '' });
+    const [paymentProcessingId, setPaymentProcessingId] = useState(null);
 
+    // useEffect(() => {
+    //     dispatch(getMyOfferedRides());
+    //     dispatch(getMyBookedRides());
+    //     return () => dispatch(reset());
+    // }, [dispatch]);
     useEffect(() => {
-        dispatch(getMyOfferedRides());
+        // We fetch offeredRides globally now, but still need bookedRides here.
         dispatch(getMyBookedRides());
         return () => dispatch(reset());
     }, [dispatch]);
@@ -57,6 +64,7 @@ const MyRidesPage = () => {
     };
 
     const handlePayment = (ride) => {
+        setPaymentProcessingId(ride._id);
         dispatch(createOrder(ride._id)).unwrap()
             .then((res) => {
                 const { order } = res;
@@ -68,24 +76,26 @@ const MyRidesPage = () => {
                     description: `Payment for ride to ${ride.to.text}`,
                     order_id: order.id,
                     handler: function (response) {
-                        // This function is called after a successful payment
                         toast.success("Payment successful!");
-                        // Refresh the rides to show the updated "paid" status
                         navigate('/dashboard');
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            setPaymentProcessingId(null); // Re-enable button if modal is closed
+                        }
                     },
                     prefill: {
                         name: user.data.name,
                         email: user.data.email,
                     },
-                    theme: {
-                        color: "#3399cc"
-                    }
+                    theme: { color: "#3399cc" }
                 };
                 const rzp = new window.Razorpay(options);
                 rzp.open();
             })
             .catch((error) => {
                 toast.error("Payment failed", { description: error });
+                setPaymentProcessingId(null);
             });
     };
 
@@ -178,6 +188,8 @@ const MyRidesPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {bookedRides.map(ride => {
                     const myBooking = ride.passengers.find(p => p.user === currentUserId);
+                    const isPaymentProcessing = paymentProcessingId === ride._id;
+
                     return (
                         <Card key={ride._id} className="flex flex-col">
                            <CardHeader>
@@ -193,14 +205,9 @@ const MyRidesPage = () => {
                                 <p className="text-sm text-muted-foreground">{format(new Date(ride.departureTime), 'PPpp')}</p>
                             </CardContent>
                             <CardFooter className="flex-col items-stretch space-y-2">
-                                {ride.status === 'InProgress' && myBooking?.status === 'approved' && (
-                                    <Button className="w-full" variant="secondary" onClick={() => navigate(`/ride/${ride._id}`)}>
-                                        Track Live Ride
-                                    </Button>
-                                )}
-                                {myBooking?.status === 'approved' && ride.status === 'InProgress' && myBooking.paymentStatus === 'pending' && (
-                                    <Button className="w-full" onClick={() => handlePayment(ride)}>
-                                        Pay Now (₹{ride.costPerSeat})
+                                {myBooking?.status === 'approved' && ride.status === 'InProgress' && myBooking.paymentStatus !== 'paid' && (
+                                    <Button className="w-full" onClick={() => handlePayment(ride)} disabled={isPaymentProcessing}>
+                                        {isPaymentProcessing ? <Spinner /> : `Pay Now (₹${ride.costPerSeat})`}
                                     </Button>
                                 )}
                                 {myBooking?.paymentStatus === 'paid' && (

@@ -66,7 +66,7 @@ app.use(express.json());
 app.use(cors());
 
 io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
+    // console.log('New client connected:', socket.id);
     socket.on('joinRide', (rideId) => { socket.join(rideId); });
     socket.on('driverLocationUpdate', (data) => { socket.to(data.rideId).emit('locationUpdate', data.location); });
     socket.on('sendMessage', async (data) => {

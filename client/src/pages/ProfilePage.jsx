@@ -206,7 +206,8 @@ const ProfilePage = () => {
                                 {reviews.length > 0 ? reviews.map(review => (
                                     <div key={review._id} className="border-b pb-4">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-semibold">{review.reviewer.name}</span>
+                                            {/* <span className="font-semibold">{review.reviewer.name}</span> */}
+                                            <span className="font-semibold">{review.reviewer?.name || 'Unknown User'}</span>
                                             <div className="flex items-center">
                                                 {[...Array(review.rating)].map((_, i) => <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />)}
                                                 {[...Array(5 - review.rating)].map((_, i) => <Star key={i} className="h-4 w-4 text-gray-300" />)}
