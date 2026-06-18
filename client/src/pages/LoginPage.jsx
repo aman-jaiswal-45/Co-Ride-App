@@ -21,7 +21,7 @@ const LoginPage = () => {
         if (isError) {
             toast.error("Login Error", { description: message });
         }
-        if (isSuccess || user) {
+        if (isSuccess) {
             navigate('/');
             toast.success("Login Successful", { description: `Welcome back !` });
         }

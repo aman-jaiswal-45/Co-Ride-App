@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getMyOfferedRides, getMyBookedRides, reset, startRide, endRide , manageBookingRequest } from '../store/ride/rideSlice';
-import { createOrder } from '../store/payment/paymentSlice';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import Spinner from '../components/Spinner';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import ReviewModal from '../components/ReviewModal';
+import PayPalModal from '../components/PayPalModal';
 
 const MyRidesPage = () => {
     const dispatch = useDispatch();
@@ -23,6 +23,8 @@ const MyRidesPage = () => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewTarget, setReviewTarget] = useState({ rideId: null, revieweeId: null, revieweeName: '' });
     const [paymentProcessingId, setPaymentProcessingId] = useState(null);
+    const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false);
+    const [payTargetRide, setPayTargetRide] = useState(null);
 
     // useEffect(() => {
     //     dispatch(getMyOfferedRides());
@@ -64,39 +66,12 @@ const MyRidesPage = () => {
     };
 
     const handlePayment = (ride) => {
-        setPaymentProcessingId(ride._id);
-        dispatch(createOrder(ride._id)).unwrap()
-            .then((res) => {
-                const { order } = res;
-                const options = {
-                    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                    amount: order.amount,
-                    currency: order.currency,
-                    name: "Co-Ride",
-                    description: `Payment for ride to ${ride.to.text}`,
-                    order_id: order.id,
-                    handler: function (response) {
-                        toast.success("Payment successful!");
-                        navigate('/dashboard');
-                    },
-                    modal: {
-                        ondismiss: function() {
-                            setPaymentProcessingId(null); // Re-enable button if modal is closed
-                        }
-                    },
-                    prefill: {
-                        name: user.data.name,
-                        email: user.data.email,
-                    },
-                    theme: { color: "#3399cc" }
-                };
-                const rzp = new window.Razorpay(options);
-                rzp.open();
-            })
-            .catch((error) => {
-                toast.error("Payment failed", { description: error });
-                setPaymentProcessingId(null);
-            });
+        setPayTargetRide(ride);
+        setIsPayPalModalOpen(true);
+    };
+
+    const handlePaymentSuccess = () => {
+        dispatch(getMyBookedRides());
     };
 
     const renderOfferedRides = () => {
@@ -117,29 +92,44 @@ const MyRidesPage = () => {
                             </div>
                         </CardHeader>
                         {ride.status === 'Scheduled' && (
-                            <CardContent>
-                            <h4 className="font-semibold mb-2">Booking Requests</h4>
-                            {ride.passengers && ride.passengers.filter(p => p.status === 'pending').length > 0 ? (
-                                <ul className="space-y-2">
-                                    {ride.passengers.map(p => (
-                                        <li key={p.user?._id || p._id} className="flex justify-between items-center p-2 bg-slate-100 rounded-md">
-                                            <span>{p.user?.name || '...'}</span>
-                                            {p.status === 'pending' ? (
-                                                <div className="space-x-2">
-                                                    <Button size="sm" disabled={!p.user} onClick={() => handleManageRequest(ride._id, p.user._id, 'approved')}>Approve</Button>
-                                                    <Button size="sm" disabled={!p.user} variant="destructive" onClick={() => handleManageRequest(ride._id, p.user._id, 'rejected')}>Reject</Button>
-                                                </div>
-                                            ) : (
-                                                // --- NEW LOGIC ---
-                                                <Badge variant={p.paymentStatus === 'paid' ? 'default' : 'secondary'}>
-                                                    {p.paymentStatus === 'paid' ? 'Paid' : 'Payment Pending'}
-                                                </Badge>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : <p className="text-sm text-muted-foreground">No pending requests.</p>}
-                        </CardContent>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm text-slate-700">Pending Requests</h4>
+                                    {ride.passengers && ride.passengers.filter(p => p.status === 'pending').length > 0 ? (
+                                        <ul className="space-y-2">
+                                            {ride.passengers.filter(p => p.status === 'pending').map(p => (
+                                                <li key={p.user?._id || p._id} className="flex justify-between items-center p-2 bg-slate-100 rounded-md">
+                                                    <span className="text-sm font-medium">{p.user?.name || '...'}</span>
+                                                    <div className="space-x-2">
+                                                        <Button size="sm" disabled={!p.user} onClick={() => handleManageRequest(ride._id, p.user._id, 'approved')}>Approve</Button>
+                                                        <Button size="sm" disabled={!p.user} variant="destructive" onClick={() => handleManageRequest(ride._id, p.user._id, 'rejected')}>Reject</Button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground">No pending requests.</p>
+                                    )}
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm text-slate-700">Confirmed Passengers</h4>
+                                    {ride.passengers && ride.passengers.filter(p => p.status === 'approved').length > 0 ? (
+                                        <ul className="space-y-2">
+                                            {ride.passengers.filter(p => p.status === 'approved').map(p => (
+                                                <li key={p.user?._id || p._id} className="flex justify-between items-center p-2 bg-green-50/50 border border-green-100 rounded-md">
+                                                    <span className="text-sm font-medium">{p.user?.name || '...'}</span>
+                                                    <Badge variant={p.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                                                        {p.paymentStatus === 'paid' ? 'Paid' : 'Payment Pending'}
+                                                    </Badge>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground">No confirmed passengers yet.</p>
+                                    )}
+                                </div>
+                            </CardContent>
                         )}
                         <CardFooter className="flex justify-end space-x-2">
                              {ride.status === 'Scheduled' && (
@@ -196,7 +186,7 @@ const MyRidesPage = () => {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle>{ride.from.text} → {ride.to.text}</CardTitle>
-                                        <CardDescription>By {ride.driver.name}</CardDescription>
+                                        <CardDescription>By {ride.driver?.name || 'Deleted User'}</CardDescription>
                                     </div>
                                     {myBooking && getStatusBadge(myBooking.status)}
                                 </div>
@@ -218,11 +208,11 @@ const MyRidesPage = () => {
                                         Track Live Ride
                                     </Button>
                                 )}
-                                {ride.status === 'Completed' && myBooking?.status === 'approved' && (
-                                    <Button className="w-full" onClick={() => handleOpenReviewModal(ride._id, ride.driver._id, ride.driver.name)}>
-                                        Review Driver
-                                    </Button>
-                                )}
+                                {ride.status === 'Completed' && myBooking?.status === 'approved' && ride.driver && (
+                                     <Button className="w-full" onClick={() => handleOpenReviewModal(ride._id, ride.driver._id, ride.driver.name)}>
+                                         Review Driver
+                                     </Button>
+                                 )}
                             </CardFooter>
                         </Card>
                     );
@@ -253,6 +243,15 @@ const MyRidesPage = () => {
                 revieweeId={reviewTarget.revieweeId}
                 revieweeName={reviewTarget.revieweeName}
             />
+            {payTargetRide && (
+                <PayPalModal
+                    isOpen={isPayPalModalOpen}
+                    setIsOpen={setIsPayPalModalOpen}
+                    ride={payTargetRide}
+                    token={user?.token}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
+            )}
         </div>
     );
 }; 

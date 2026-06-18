@@ -1,8 +1,8 @@
 const Feedback = require('../models/Feedback');
 
-// @desc    Submit feedback about the app
-// @route   POST /api/feedback
-// @access  Private
+// Submit feedback about the app
+// POST /api/feedback
+// Private
 exports.submitFeedback = async (req, res) => {
     try {
         const { type, message } = req.body;

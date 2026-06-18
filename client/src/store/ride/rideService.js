@@ -56,8 +56,14 @@ const endRide = async (rideId, token) => {
     return response.data;
 };
 
+const getRide = async (rideId, token) => {
+    const config = { headers: { Authorization: `Bearer ${token}` } };
+    const response = await axios.get(API_URL + rideId, config);
+    return response.data;
+};
+
 const rideService = {
     createRide, getRides, bookRide, getMyOfferedRides, getMyBookedRides,
-    startRide, manageBookingRequest, getChatHistory, endRide
+    startRide, manageBookingRequest, getChatHistory, endRide, getRide
 };
 export default rideService;

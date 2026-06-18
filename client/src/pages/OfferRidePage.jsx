@@ -21,7 +21,7 @@ const OfferRidePage = () => {
     const [departureTime, setDepartureTime] = useState('');
     const [seatsAvailable, setSeatsAvailable] = useState(1);
     const [costPerSeat, setCostPerSeat] = useState('');
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false); // State to control calendar
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -42,26 +42,27 @@ const OfferRidePage = () => {
         combinedDateTime.setMinutes(parseInt(minutes, 10));
         combinedDateTime.setSeconds(0);
 
-        if (combinedDateTime < new Date()) {
-            toast.error("Departure time cannot be in the past.");
+        const minDepartureTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes in the future
+        if (combinedDateTime < minDepartureTime) {
+            toast.error("Departure time must be at least 5 minutes in the future.");
             return;
         }
 
         const rideData = {
-            from: { text: from, lat: 0, lng: 0 }, // Placeholder lat/lng
-            to: { text: to, lat: 0, lng: 0 }, // Placeholder lat/lng
+            from: { text: from, lat: 0, lng: 0 },
+            to: { text: to, lat: 0, lng: 0 },
             departureTime: combinedDateTime.toISOString(),
             seatsAvailable: Number(seatsAvailable),
             costPerSeat: Number(costPerSeat),
         };
-        
+
         dispatch(createRide(rideData)).unwrap()
             .then(() => {
                 toast.success("Ride offered successfully!");
                 navigate('/find-ride');
             })
             .catch((error) => {
-                 toast.error("Failed to offer ride", { description: error });
+                toast.error("Failed to offer ride", { description: error });
             });
     };
 
@@ -100,7 +101,12 @@ const OfferRidePage = () => {
                                             selected={departureDate}
                                             onSelect={(date) => {
                                                 setDepartureDate(date);
-                                                setIsCalendarOpen(false); // Close calendar on select
+                                                setIsCalendarOpen(false);
+                                            }}
+                                            disabled={(date) => {
+                                                const today = new Date();
+                                                today.setHours(0, 0, 0, 0);
+                                                return date < today;
                                             }}
                                             initialFocus
                                         />
@@ -112,8 +118,8 @@ const OfferRidePage = () => {
                                 <Input id="departureTime" type="time" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
                             </div>
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <Label htmlFor="seatsAvailable">Seats Available</Label>
                                 <Input id="seatsAvailable" type="number" min="1" max="8" value={seatsAvailable} onChange={(e) => setSeatsAvailable(e.target.value)} />
                             </div>

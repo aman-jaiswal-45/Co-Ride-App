@@ -10,6 +10,7 @@ const initialState = {
     isLoading: false,
     message: '',
     chatHistory: [],
+    currentRide: null,
 };
 
 export const createRide = createAsyncThunk('rides/create', async (rideData, thunkAPI) => {
@@ -103,6 +104,16 @@ export const endRide = createAsyncThunk('rides/end', async (rideId, thunkAPI) =>
     }
 });
 
+export const getRide = createAsyncThunk('rides/getOne', async (rideId, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user.token;
+        return await rideService.getRide(rideId, token);
+    } catch (error) {
+        const message = (error.response?.data?.error) || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
 export const rideSlice = createSlice({
     name: 'ride',
     initialState,
@@ -113,6 +124,7 @@ export const rideSlice = createSlice({
             state.isError = false;
             state.message = '';
             state.chatHistory = [];
+            state.currentRide = null;
         },
         addChatMessage: (state, action) => { // <-- ADD THIS REDUCER
             state.chatHistory.push(action.payload);
@@ -190,6 +202,19 @@ export const rideSlice = createSlice({
                 }
             })
             .addCase(endRide.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(getRide.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getRide.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.currentRide = action.payload.data;
+            })
+            .addCase(getRide.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

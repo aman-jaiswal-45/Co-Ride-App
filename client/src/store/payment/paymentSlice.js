@@ -8,10 +8,20 @@ const initialState = {
     message: ''
 };
 
-export const createOrder = createAsyncThunk('rides/payment/createOrder', async (rideId, thunkAPI) => {
+export const createPayPalOrder = createAsyncThunk('payment/createOrder', async (rideId, thunkAPI) => {
     try {
         const token = thunkAPI.getState().auth.user.token;
-        return await paymentService.createOrder(rideId, token);
+        return await paymentService.createPayPalOrder(rideId, token);
+    } catch (error) {
+        const message = (error.response?.data?.error) || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
+export const capturePayPalOrder = createAsyncThunk('payment/captureOrder', async (orderId, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user.token;
+        return await paymentService.capturePayPalOrder(orderId, token);
     } catch (error) {
         const message = (error.response?.data?.error) || error.message || error.toString();
         return thunkAPI.rejectWithValue(message);
@@ -26,14 +36,26 @@ export const paymentSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            .addCase(createOrder.pending, (state) => {
+            .addCase(createPayPalOrder.pending, (state) => {
                 state.isLoading = true;
             })
-            .addCase(createOrder.fulfilled, (state, action) => {
+            .addCase(createPayPalOrder.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.order = action.payload;
             })
-            .addCase(createOrder.rejected, (state, action) => {
+            .addCase(createPayPalOrder.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(capturePayPalOrder.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(capturePayPalOrder.fulfilled, (state) => {
+                state.isLoading = false;
+                state.order = null; // Clear order on capture
+            })
+            .addCase(capturePayPalOrder.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

@@ -21,7 +21,7 @@ const RegisterPage = () => {
         if (isError) {
             toast.error("Registration Error", { description: message });
         }
-        if (isSuccess || user) {
+        if (isSuccess) {
             toast.success("Success!", { description: "Registration successful. Welcome!" });
             navigate('/');
         }

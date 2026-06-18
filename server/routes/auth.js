@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
-router.get('/me', protect, getMe); // A protected route example
+router.get('/me', protect, getMe); // A protected route to get current logged in user
 
 module.exports = router;

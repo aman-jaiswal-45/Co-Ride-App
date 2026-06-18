@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getStats, getAllUsers, getAllRides, getAllFeedback, reset } from '../store/admin/adminSlice';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Spinner from '../components/Spinner';
@@ -111,7 +112,7 @@ const AdminDashboardPage = () => {
                                         <TableRow key={ride._id}>
                                             <TableCell>{ride.from.text}</TableCell>
                                             <TableCell>{ride.to.text}</TableCell>
-                                            <TableCell>{ride.driver.name}</TableCell>
+                                            <TableCell>{ride.driver?.name || 'Deleted User'}</TableCell>
                                             <TableCell>{ride.status}</TableCell>
                                             <TableCell>{ride.passengers.length} / {ride.passengers.length + ride.seatsAvailable}</TableCell>
                                         </TableRow>
@@ -140,7 +141,7 @@ const AdminDashboardPage = () => {
                                 <TableBody>
                                     {feedback.map(item => (
                                         <TableRow key={item._id}>
-                                            <TableCell>{item.user.name}</TableCell>
+                                            <TableCell>{item.user?.name || 'Deleted User'}</TableCell>
                                             <TableCell><Badge variant="secondary">{item.type}</Badge></TableCell>
                                             <TableCell className="max-w-sm whitespace-pre-wrap">{item.message}</TableCell>
                                             <TableCell>{format(new Date(item.createdAt), 'PP')}</TableCell>

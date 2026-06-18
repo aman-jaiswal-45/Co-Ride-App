@@ -1,145 +1,58 @@
-// import React, { useEffect, useState, useRef } from 'react';
-// import { useParams } from 'react-router-dom';
-// import { useSelector, useDispatch } from 'react-redux';
-// import { getChatHistory, addChatMessage, reset } from '../store/ride/rideSlice';
-// import io from 'socket.io-client';
-// import LiveMap from '../components/LiveMap';
-// import ChatBox from '../components/ChatBox';
-// import Spinner from '../components/Spinner';
-
-// const SOCKET_SERVER_URL = "https://co-ride-app.onrender.com";
-
-// const ActiveRidePage = () => {
-//     const { rideId } = useParams();
-//     const dispatch = useDispatch();
-//     const { user } = useSelector(state => state.auth);
-//     const { chatHistory, isLoading } = useSelector(state => state.rides);
-//     const socketRef = useRef(null);
-
-//     const [driverLocation, setDriverLocation] = useState(null);
-//     const [initialCenter, setInitialCenter] = useState([23.2599, 77.4126]); // Default to Bhopal
-
-//     useEffect(() => {
-//         // Get the user's current location once when the component loads
-//         navigator.geolocation.getCurrentPosition(
-//             (position) => {
-//                 const { latitude, longitude } = position.coords;
-//                 setInitialCenter([latitude, longitude]);
-//             },
-//             () => {
-//                 console.log("Could not get location, using default.");
-//             }
-//         );
-
-//         // ... the rest of the existing useEffect logic for sockets, etc.
-//     }, []);
-
-//     useEffect(() => {
-//         // Fetch initial chat history
-//         dispatch(getChatHistory(rideId));
-        
-//         // Connect to the socket server
-//         socketRef.current = io(SOCKET_SERVER_URL);
-
-//         // Join the specific ride room
-//         socketRef.current.emit('joinRide', rideId);
-
-//         // Listen for location updates
-//         socketRef.current.on('locationUpdate', (location) => {
-//             setDriverLocation(location);
-//         });
-
-//         // Listen for new messages
-//         socketRef.current.on('receiveMessage', (message) => {
-//             dispatch(addChatMessage(message)); // Add new message to Redux state
-//         });
-        
-//         // Geolocation for driver
-//         let watchId;
-//         if (user?.data?.role === 'Driver') {
-//             watchId = navigator.geolocation.watchPosition(
-//                 (position) => {
-//                     const { latitude, longitude } = position.coords;
-//                     const location = { lat: latitude, lng: longitude };
-//                     socketRef.current.emit('driverLocationUpdate', { rideId, location });
-//                 },
-//                 (error) => console.error("Geolocation Error:", error),
-//                 { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-//             );
-//         }
-
-//         // Cleanup on component unmount
-//         return () => {
-//             if (watchId) navigator.geolocation.clearWatch(watchId);
-//             socketRef.current.disconnect();
-//             dispatch(reset()); // Reset ride slice state
-//         };
-//     }, [rideId, user?.data?.role, dispatch]);
-
-//     const handleSendMessage = (text) => {
-//         socketRef.current.emit('sendMessage', {
-//             rideId,
-//             user: { name: user.data.name },
-//             text,
-//         });
-//     };
-
-//     if (isLoading && chatHistory.length === 0) {
-//         return <div className="flex justify-center items-center h-full"><Spinner /></div>;
-//     }
-
-//     return (
-//         <div className="container mx-auto py-8 grid grid-cols-1 lg:grid-cols-3 gap-4 h-[80vh]">
-//             <div className="lg:col-span-2 w-[80%] mx-auto p-4 border border-gray-300 rounded-lg shadow-sm"> 
-//                 {/* <LiveMap driverLocation={driverLocation} /> */}
-//                 {/*When rendering the map, you would pass this new state: */}
-//                 <LiveMap driverLocation={driverLocation} initialCenter={initialCenter} />
-//             </div>
-//             <div className="lg:col-span-1 flex flex-col h-full">
-//                 <ChatBox messages={chatHistory} onSendMessage={handleSendMessage} />
-//             </div>
-//         </div>
-//     );
-// };
-
-// export default ActiveRidePage;
-
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { getChatHistory, addChatMessage, reset } from '../store/ride/rideSlice';
+import { getChatHistory, getRide, addChatMessage, reset } from '../store/ride/rideSlice';
 import io from 'socket.io-client';
 import LiveMap from '../components/LiveMap';
 import ChatBox from '../components/ChatBox';
 import Spinner from '../components/Spinner';
 
-const SOCKET_SERVER_URL = "https://co-ride-app.onrender.com";
+const SOCKET_SERVER_URL = import.meta.env.VITE_API_URL 
+    ? import.meta.env.VITE_API_URL.replace('/api/', '') 
+    : "https://co-ride-app.onrender.com";
 
 const ActiveRidePage = () => {
     const { rideId } = useParams();
     const dispatch = useDispatch();
     const { user } = useSelector(state => state.auth);
-    const { chatHistory, isLoading } = useSelector(state => state.rides);
+    const { chatHistory, currentRide, isLoading } = useSelector(state => state.rides);
     const socketRef = useRef(null);
 
     const [driverLocation, setDriverLocation] = useState(null);
 
+    // Effect 1: Handle ride info fetching & socket connection
     useEffect(() => {
+        dispatch(getRide(rideId));
         dispatch(getChatHistory(rideId));
-        socketRef.current = io(SOCKET_SERVER_URL);
+
+        socketRef.current = io(SOCKET_SERVER_URL, {
+            auth: { token: user?.token }
+        });
         socketRef.current.emit('joinRide', rideId);
         socketRef.current.on('locationUpdate', (location) => { setDriverLocation(location); });
         socketRef.current.on('receiveMessage', (message) => { dispatch(addChatMessage(message)); });
-        
-        // MODIFIED: Check for vehicle details to determine if user is the driver of ANY ride
+
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+            dispatch(reset());
+        };
+    }, [rideId, dispatch, user?.token]);
+
+    // Effect 2: Watch driver location (only if logged-in user is the driver)
+    useEffect(() => {
         let watchId;
-        if (user?.data?.vehicleDetails?.name) { // A simple proxy for being a potential driver
+        const driverId = currentRide?.driver?._id || currentRide?.driver;
+        const isDriver = driverId && driverId === user?.data?._id;
+
+        if (isDriver) {
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     const location = { lat: latitude, lng: longitude };
-                    socketRef.current.emit('driverLocationUpdate', { rideId, location });
+                    setDriverLocation(location);
+                    if (socketRef.current) {
+                        socketRef.current.emit('driverLocationUpdate', { rideId, location });
+                    }
                 },
                 (error) => console.error("Geolocation Error:", error),
                 { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -148,17 +61,17 @@ const ActiveRidePage = () => {
 
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
-            socketRef.current.disconnect();
-            dispatch(reset());
         };
-    }, [rideId, user?.data?.vehicleDetails?.name, dispatch]);
+    }, [currentRide, user?.data?._id, rideId]);
 
     const handleSendMessage = (text) => {
-        socketRef.current.emit('sendMessage', {
-            rideId,
-            user: { name: user.data.name },
-            text,
-        });
+        if (socketRef.current) {
+            socketRef.current.emit('sendMessage', {
+                rideId,
+                user: { name: user.data.name },
+                text,
+            });
+        }
     };
 
     if (isLoading && chatHistory.length === 0) {
@@ -168,7 +81,11 @@ const ActiveRidePage = () => {
     return (
         <div className="container mx-auto py-8 grid grid-cols-1 lg:grid-cols-3 gap-8 h-[80vh]">
             <div className="lg:col-span-2 h-full">
-                <LiveMap driverLocation={driverLocation} />
+                <LiveMap 
+                    driverLocation={driverLocation} 
+                    from={currentRide?.from} 
+                    to={currentRide?.to} 
+                />
             </div>
             <div className="lg:col-span-1 h-full flex flex-col">
                 <ChatBox messages={chatHistory} onSendMessage={handleSendMessage} />

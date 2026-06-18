@@ -12,17 +12,18 @@ const initialState = {
     message: '',
 };
 
-export const register = createAsyncThunk('auth/register', async (user, thunkAPI) => {
-    try {
-        const tokenData = await authService.register(user);
-        const userData = await authService.getMe(tokenData.token);
-        const combinedData = { token: tokenData.token, data: userData.data };
-        localStorage.setItem('user', JSON.stringify(combinedData));
-        return combinedData;
-    } catch (error) {
-        const message = (error.response?.data?.error) || error.message || error.toString();
-        return thunkAPI.rejectWithValue(message);
-    }
+export const register = createAsyncThunk('auth/register',
+    async (user, thunkAPI) => {
+        try {
+            const tokenData = await authService.register(user);
+            const userData = await authService.getMe(tokenData.token);
+            const combinedData = { token: tokenData.token, data: userData.data };
+            localStorage.setItem('user', JSON.stringify(combinedData));
+            return combinedData;
+        } catch (error) {
+            const message = (error.response?.data?.error) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
 });
 
 export const login = createAsyncThunk('auth/login', async (user, thunkAPI) => {
@@ -87,7 +88,7 @@ export const authSlice = createSlice({
                 state.user = null;
             })
             .addCase(logout.fulfilled, (state) => { state.user = null; })
-            // THIS IS THE FIX: Listen for the updateUserProfile action
+            // Listen for the updateUserProfile action
             .addCase(updateUserProfile.fulfilled, (state, action) => {
                 if (state.user) {
                     state.user.data = action.payload.data;

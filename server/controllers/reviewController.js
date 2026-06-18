@@ -2,9 +2,9 @@ const Review = require('../models/Review');
 const Ride = require('../models/Ride');
 const User = require('../models/User');
 
-// @desc    Get reviews for a user
-// @route   GET /api/reviews/user/:userId
-// @access  Private
+// Get reviews for a user
+// GET /api/reviews/user/:userId
+// Private
 exports.getUserReviews = async (req, res) => {
     try {
         const reviews = await Review.find({ reviewee: req.params.userId }).populate('reviewer', 'name');
@@ -14,9 +14,9 @@ exports.getUserReviews = async (req, res) => {
     }
 };
 
-// @desc    Add a review
-// @route   POST /api/reviews
-// @access  Private
+// Add a review
+// POST /api/reviews
+// Private
 exports.addReview = async (req, res) => {
     try {
         req.body.reviewer = req.user.id; // Logged in user is the reviewer
@@ -31,7 +31,7 @@ exports.addReview = async (req, res) => {
         if (rideDetails.status !== 'Completed') {
             return res.status(400).json({ success: false, error: 'You can only review completed rides.' });
         }
-        
+
         // Check if reviewer was part of the ride
         const isDriver = rideDetails.driver.toString() === req.user.id;
         const isApprovedPassenger = rideDetails.passengers.some(p => p.user.toString() === req.user.id && p.status === 'approved');

@@ -41,7 +41,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: 'https://api.pravatar.cc/150?u=a042581f4e29026704d' 
     },
-    bio: { // <-- ADD THIS
+    bio: { 
         type: String,
         maxlength: [250, 'Bio cannot be more than 250 characters']
     },
@@ -51,16 +51,14 @@ const UserSchema = new mongoose.Schema({
     }
 });
 
-// Encrypt password using bcrypt
 UserSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function(enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
