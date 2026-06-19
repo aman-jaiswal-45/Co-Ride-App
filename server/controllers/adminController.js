@@ -19,7 +19,7 @@ exports.getAllUsers = async (req, res) => {
 // Private/Admin
 exports.getAllRides = async (req, res) => {
     try {
-        const rides = await Ride.find({}).populate('driver', 'name').populate('passengers', 'name');
+        const rides = await Ride.find({}).populate('driver', 'name').populate('passengers.user', 'name');
         res.status(200).json({ success: true, count: rides.length, data: rides });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Server Error' });

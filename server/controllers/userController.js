@@ -26,9 +26,11 @@ exports.updateUserProfile = async (req, res) => {
 
             // Users can now freely add or update their vehicle details.
             if (req.body.vehicleDetails) {
-                user.vehicleDetails.type = req.body.vehicleDetails.type || user.vehicleDetails.type;
-                user.vehicleDetails.name = req.body.vehicleDetails.name || user.vehicleDetails.name;
-                user.vehicleDetails.regNumber = req.body.vehicleDetails.regNumber || user.vehicleDetails.regNumber;
+                user.vehicleDetails = {
+                    type: req.body.vehicleDetails.type || (user.vehicleDetails && user.vehicleDetails.type) || 'Car',
+                    name: req.body.vehicleDetails.name || (user.vehicleDetails && user.vehicleDetails.name),
+                    regNumber: req.body.vehicleDetails.regNumber || (user.vehicleDetails && user.vehicleDetails.regNumber)
+                };
             }
 
             const updatedUser = await user.save();

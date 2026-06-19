@@ -39,6 +39,18 @@ exports.addReview = async (req, res) => {
             return res.status(403).json({ success: false, error: 'You were not part of this ride.' });
         }
 
+        // Prevent self-reviewing
+        if (req.user.id.toString() === reviewee.toString()) {
+            return res.status(400).json({ success: false, error: 'You cannot review yourself.' });
+        }
+
+        // Check if reviewee was part of the ride
+        const isRevieweeDriver = rideDetails.driver.toString() === reviewee;
+        const isRevieweePassenger = rideDetails.passengers.some(p => p.user.toString() === reviewee && p.status === 'approved');
+        if (!isRevieweeDriver && !isRevieweePassenger) {
+            return res.status(400).json({ success: false, error: 'The user being reviewed was not part of this ride.' });
+        }
+
         const review = await Review.create(req.body);
         res.status(201).json({ success: true, data: review });
 

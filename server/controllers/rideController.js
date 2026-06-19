@@ -18,7 +18,16 @@ exports.createRide = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Departure time must be at least 5 minutes in the future.' });
         }
 
-        const rideData = { ...req.body, driver: driverId, vehicle: driver.vehicleDetails };
+        const { from, to, departureTime, seatsAvailable, costPerSeat } = req.body;
+        const rideData = { 
+            from, 
+            to, 
+            departureTime, 
+            seatsAvailable: Number(seatsAvailable), 
+            costPerSeat: Number(costPerSeat), 
+            driver: driverId, 
+            vehicle: driver.vehicleDetails 
+        };
         const ride = await Ride.create(rideData);
         res.status(201).json({ success: true, data: ride });
 
@@ -35,8 +44,36 @@ exports.getRides = async (req, res) => {
 exports.getMyOfferedRides = async (req, res) => {
     try {
         const rides = await Ride.find({ driver: req.user.id }).populate('passengers.user', 'name');
+        
+        for (let ride of rides) {
+            let changed = false;
+            let approvedSeatsToRestore = 0;
+            const activePassengers = [];
+
+            for (let p of ride.passengers) {
+                if (p.user === null) {
+                    changed = true;
+                    if (p.status === 'approved') {
+                        approvedSeatsToRestore++;
+                    }
+                } else {
+                    activePassengers.push(p);
+                }
+            }
+
+            if (changed) {
+                ride.passengers = activePassengers;
+                if (['Scheduled', 'InProgress'].includes(ride.status)) {
+                    ride.seatsAvailable += approvedSeatsToRestore;
+                }
+                await ride.save();
+            }
+        }
+
         res.status(200).json({ success: true, data: rides });
-    } catch (error) { res.status(500).json({ success: false, error: 'Server Error' }); }
+    } catch (error) { 
+        res.status(500).json({ success: false, error: 'Server Error' }); 
+    }
 };
 exports.getMyBookedRides = async (req, res) => {
     try {
@@ -55,6 +92,7 @@ exports.bookRide = async (req, res) => {
     try {
         const ride = await Ride.findById(req.params.id);
         if (!ride) return res.status(404).json({ success: false, error: 'Ride not found' });
+        if (ride.status !== 'Scheduled') return res.status(400).json({ success: false, error: 'You can only book scheduled rides.' });
         if (ride.driver.toString() === req.user.id.toString()) return res.status(400).json({ success: false, error: 'You cannot book your own ride' });
         const existingPassenger = ride.passengers.find(p => p.user.toString() === req.user.id.toString());
         if (existingPassenger) return res.status(400).json({ success: false, error: 'You have already sent a request for this ride' });
